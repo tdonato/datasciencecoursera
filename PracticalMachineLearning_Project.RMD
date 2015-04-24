@@ -1,0 +1,99 @@
+---
+title: "HAR"
+author: "Thiago Donato"
+date: "Friday, April 17, 2015"
+output: html_document
+---
+#HUMAN ACTIVITY RECOGNITION
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The goal of the project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with.
+
+#LIBRARIES
+
+During this exercises, the caret and ggplot2 packages are going to be used to model and plot the data, respectively. In addition, a small fix of the caret package is needed.
+
+```{r}
+library(caret)
+library(ggplot2)
+
+class2ind <- function(cl)
+{
+  n <- length(cl)
+  cl <- as.factor(cl)
+  x <- matrix(0, n, length(levels(cl)) )
+  x[(1:n) + n*(unclass(cl)-1)] <- 1
+  dimnames(x) <- list(names(cl), levels(cl))
+  x
+}
+```
+
+#FEATURES SELECTION
+
+The features user_name, x and timestamps were excluded of the modelling process becouse they do not influence the "classe" variable.
+
+training <- training[,-c(training$user_name,training$x,training$raw_timestamp_part_1,training$raw_timestamp_part_2,training$cvtd_timestamp)]
+
+#PREPROCESSING THE TRAINING SET
+
+The training set is imported from the csv file, the columns user_name and timestamps references are excluded of the analysis and all the remaining columns are converted to numeric values.
+
+```{r}
+training <- read.csv("pml-training.csv")
+training <- training[,-c(training$user_name,training$x,training$raw_timestamp_part_1,training$raw_timestamp_part_2,training$cvtd_timestamp)]
+
+for (j in 1:length(training)) {
+    training[,j] <- as.numeric(training[,j])  
+}
+```
+
+The testing set is imported as well.
+
+```{r}
+testing <- read.csv("pml-testing.csv")
+```
+
+#MODEL VALIDATION
+
+The chosen way to validate the model is the cross validation. 
+
+```{r}
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1)
+```
+
+#MODEL TUNING
+
+The problem consists of a regression issue. Therefore, it was selected the ADA modelling algorithm. In order to tune the model, the parameters mstop and nu were selected to vary, according to the following grid.
+
+```{r}
+adaGrid <-  expand.grid(mstop = (1:30)*50, nu = 0.1)
+```                        
+
+#MODEL CREATION
+
+The chosen model to predict the "classe" feature is the ADA. 
+
+After defining the validation and tuning grids, it is used the train function to apply the ADA algorithm to the training set. Before that, it is applied a preprocessing process that centers, scales and replace the NA values through the "center", "scale" and "knnImpute" functions, respectively.
+
+```{r}
+set.seed(825)
+
+adaFit <- train(training$classe ~ ., data = training,
+                 method = "bstLs", 
+                 preProcess = c("center", "scale","knnImpute"),
+                 trControl = fitControl, tuneGrid = adaGrid)
+                 #verbose = FALSE)
+                 # Now specify the exact models 
+                 # to evaludate:
+                 #tuneGrid = gbmGrid)
+```
+
+#MODEL RMSE
+
+After creating the model, it is evaluated regarding to the RMSE value.
+
+```{r}
+trellis.par.set(caretTheme())
+plot(adaFit)
+```
