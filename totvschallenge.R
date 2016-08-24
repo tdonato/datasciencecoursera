@@ -19,7 +19,7 @@ splitDf <- function( dataframe, seed=NULL ) {
   list( trainset = trainset, testset = testset )
 }
 
-json_path <- "C:/phmchallenge/sample.txt"
+json_path <- "C:/totvschallenge/sample.txt"
 json_data <- fromJSON( json_path )
 
 json_file <- lapply(json_data, function(x) {
